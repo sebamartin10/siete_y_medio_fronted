@@ -1,9 +1,12 @@
+import Treasure from "./Treasure";
+
 export class Player{
     name : string;
-    isBanker : boolean;
+    treasure : Treasure;
 
-    constructor(playerName:string,banker:boolean){
+    constructor(playerName:string,treasure:Treasure){
         this.name=playerName;
-        this.isBanker = banker;
+        this.treasure=treasure;
     }
 }
+export default Player;

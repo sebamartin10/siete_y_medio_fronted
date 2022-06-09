@@ -9,15 +9,17 @@ import { useEffect, useState } from 'react';
 import { render } from '@testing-library/react';
 import { display } from '@mui/system';
 import { InMemoryGameSessionRepository } from '../../Repositories/InMemoryGameSessionRepository';
-import { LocalGameService } from '../../Services/LocalGameService';
+import LocalGameService from '../../Services/LocalGameService';
 import { Player } from '../../Models/Player';
+import Treasure from '../../Models/Treasure';
+import axios from 'axios';
 
 
 
 
 const Board = () => {
-
-
+    
+    let playerNameInput : string;
     enum State {
         Bet,
         Give,
@@ -26,24 +28,26 @@ const Board = () => {
 
     }
     let bank: Boolean;
+    
    
-    let service = new LocalGameService(new InMemoryGameSessionRepository());
+    
 
-
-    const [playerLog,setPlayerLog] = useState("");
-
+    const [playerName,setPlayerName] = useState("");
+    const [playerID,setPlayerID] = useState(0);
+    
+    const [playersVisibility,setPlayersVisibility] = useState(new Array(4).fill("hidden"));
     const [errorPanelVisibility,setErrorPanelVisibility] = useState<any>("hidden");
     const [gameBoardVisibility, setGameBoardVisibility] = useState<any>("hidden");
     const [loginVisibility,setLoginVisibility] = useState<any>("visible");
     const [createOrJoinVisibility,setCreateOrJoinVisibility] = useState<any>("hidden");
 
-    const [players, setPlayers] = useState(new Array<Player>(4).fill(new Player("", false)));
+    const [players, setPlayers] = useState(new Array<Player>(4).fill(new Player("",new Treasure(0,0,0,0,0,0))));
     const [player, setPlayer] = useState("");
     const [isBanker, setIsBanker] = useState(false);
     const [currentState, SetCurrentState] = useState(State.Waiting);
 
-    const [totalTreasureP1, setTotalTreasure] = useState(10750);
-    const [treasureP1, setTreasureP1] = useState([10, 5, 3, 2, 1]);
+    const [totalTreasureP1, setTotalTreasure] = useState(0);
+    const [treasureP1, setTreasureP1] = useState([0, 0, 0, 0, 0]);
 
     const [totalTreasureP2, setTotalTreasureP2] = useState(10750);
     const [treasureP2, setTreasureP2] = useState([10, 5, 3, 2, 1]);
@@ -75,22 +79,24 @@ const Board = () => {
     const [bankVisibility, setBankVisibility] = useState(new Array(4).fill("hidden"));
 
 
-
+    const handleChange = (event:any) => {
+        
+        setPlayerName(event.target.value);
+      };
 
     function handleActionsVisibility() {
         let actionsVisibility = new Array(3).fill(true);
-        let playerRole = service.getPlayerRoleForGame("1");
-        if (playerRole === "banker") {
-            actionsVisibility[0] = false;
+        let playerRole = LocalGameService
+        actionsVisibility[0] = false;
 
-        }
+        
         return actionsVisibility;
     }
 
     function setInitialStateOfGame() {
         var newPlayers = [...players];
-        newPlayers[0].name = playerLog;
-        newPlayers[0].isBanker = true;
+        newPlayers[0].name = playerName;
+    
         setPlayers(newPlayers);
 
         let newBankVisibility = [...bankVisibility];
@@ -99,14 +105,94 @@ const Board = () => {
 
     }
     function login(name : string, pass : string){
-        setPlayerLog(name);
+        
+        let player = createPlayer(name);
+        
         setLoginVisibility("hidden");
         setCreateOrJoinVisibility("visible");
     }
     function createGame() {
         setCreateOrJoinVisibility("hidden");
         setGameBoardVisibility("visible");
+
+        
+        axios.get('http://localhost:3000/players/'+playerID+'?')
+        .then(response => {
+            
+            console.log(response.data)
+         
+            let newTreasureP1 = [...treasureP1];
+            newTreasureP1[0] = response.data.treasure.chips100_amount;
+            newTreasureP1[1] = response.data.treasure.chips250_amount;
+            newTreasureP1[2] = response.data.treasure.chips500_amount;
+            newTreasureP1[3] = response.data.treasure.chips1k_amount;
+            newTreasureP1[4] = response.data.treasure.chips5k_amount;
+            setTreasureP1(newTreasureP1);
+
+            setTotalTreasure(response.data.treasure.total);
+
+            let newPlayersVisibility = [...playersVisibility];
+            newPlayersVisibility[0] = "visible";
+            setPlayersVisibility(newPlayersVisibility);
+
+            const session = {
+                maxAmountOfPlayers : 4
+            };
+
+            axios.post('http://localhost:3000/sessions',{session})
+                .then(session_response=>{
+                    const player_session = {
+                        player_id : playerID,
+                        session_id : session_response.data.session.id
+                    };
+                    axios.post('http://localhost:3000/player_sessions',{player_session});
+                        
+                    const round = {
+                        bank : playerName,
+                        is_current_round : true,
+                        previous_turn : "",
+                        current_turn : playerName,
+                        next_turn : "",
+                        session_id : session_response.data.session.id
+                    };
+                    axios.post('http://localhost:3000/rounds',{round});
+                }
+
+                )
+
+
+        })
+
+
         setInitialStateOfGame();
+    }
+    function createPlayer(name: string){
+        const player = {
+            name : name
+        };
+        axios.post('http://localhost:3000/players', { player })
+            .then(player_response => {
+                setPlayerID(player_response.data.player.id);
+                
+                const treasure = {
+                    chips100_amount : 10,
+                    chips250_amount : 5,
+                    chips500_amount : 3,
+                    chips1k_amount : 2,
+                    chips5k_amount : 1,
+                    total:10750,
+                    player_id:player_response.data.player.id
+                };
+               
+                
+                axios.post('http://localhost:3000/treasures',{treasure})
+                    .then(treasure_response =>{
+                        console.log(treasure_response.data.treasure);
+                        
+                    })
+
+            })
+           
     }
 
     
@@ -183,7 +269,7 @@ const Board = () => {
                         <label>Name:</label>
                     </div>
                     <div className='grid-item'>
-                        <input placeholder='your name'/>
+                        <input placeholder='your name'onChange={handleChange} value={playerName}/>
                     </div>
                 </div>
                 <div className='grid-container-x2'>
@@ -197,7 +283,7 @@ const Board = () => {
                 <div style={{width:"100%",top:"30px",position:"relative",textAlign:"center",margin:"10px"}}>
                     <label>If you dont have an account we are going to create one automatically.</label>
                     <br />
-                    <button onClick={()=>login("Seba","Pass1")}>Login</button>
+                    <button onClick={()=>login(playerName,"Pass1")}>Login</button>
                 </div>
                 
             </div>
@@ -210,7 +296,7 @@ const Board = () => {
 
             
             <div className='create_or_join_panel' style={{ visibility:createOrJoinVisibility}}>
-                <label>Welcome : {playerLog}</label>
+                <label>Welcome : {playerName}</label>
                 <Grid container spacing={0}>
                     <Grid item xs={4}>
                         <Button onClick={()=>createGame()} variant="contained" size="small" >
@@ -232,7 +318,7 @@ const Board = () => {
 
             <div style={{ visibility: gameBoardVisibility }}>
 
-                <div className='player3-container'>
+                <div className='player3-container' style={{ visibility: chipsVisibilityP3[2] }}>
                     <div className='total-bet' style={{ transform: "rotate(180deg)" }}>
                         <label>Bet : $</label>
                         <label>{totalBetP3}</label>
@@ -353,7 +439,7 @@ const Board = () => {
 
                 </div>
 
-                <div className='player2-container'>
+                <div className='player2-container' style={{visibility: playersVisibility[1]}}>
                     <div className='total-bet' style={{ transform: "rotate(180deg)", backgroundColor: "red" }}>
                         <label>Bet : $</label>
                         <label>{totalBetP2}</label>
@@ -474,7 +560,7 @@ const Board = () => {
 
                 </div>
 
-                <div className='player4-container'>
+                <div className='player4-container' style={{visibility: playersVisibility[3]}}>
                     <div className='total-bet' style={{ transform: "rotate(180deg)", backgroundColor: "green" }}>
                         <label>Bet : $</label>
                         <label>{totalBetP4}</label>
@@ -595,7 +681,7 @@ const Board = () => {
 
                 </div>
 
-                <div className='player1-container'>
+                <div className='player1-container' style={{visibility: playersVisibility[0]}}>
                     <div className='total-bet' style={{ backgroundColor: "blue" }}>
                         <label>Bet : $</label>
                         <label>{totalBetP1}</label>
@@ -641,7 +727,7 @@ const Board = () => {
 
                     <div className='grid-container-x4'>
                         <div className='user-profile'>
-                            <label style={{ position: "relative", top: "50px" }}>Seba</label>
+                            <label style={{ position: "relative", top: "50px" }}>{playerName}</label>
                             <div className='bank' style={{ visibility: bankVisibility[0] }}>
                                 <label>BANK</label>
                             </div>
