@@ -28,15 +28,15 @@ const Board = () => {
 
     }
     let bank: Boolean;
-
+    let positionInBoard: number = 0;
 
 
 
     const [playerName, setPlayerName] = useState("");
     const [playerID, setPlayerID] = useState(0);
-    const[player2Name,setPlayer2Name] = useState("");
-    const[player3Name,setPlayer3Name] = useState("");
-    const[player4Name,setPlayer4Name] = useState("");
+    const [player2Name, setPlayer2Name] = useState("");
+    const [player3Name, setPlayer3Name] = useState("");
+    const [player4Name, setPlayer4Name] = useState("");
 
     const [currentSessionID, setCurrentSessionID] = useState(0);
 
@@ -45,8 +45,8 @@ const Board = () => {
     const [gameBoardVisibility, setGameBoardVisibility] = useState<any>("hidden");
     const [loginVisibility, setLoginVisibility] = useState<any>("visible");
     const [createOrJoinVisibility, setCreateOrJoinVisibility] = useState<any>("hidden");
-    const [frontCardVisibility,setFrontCardVisibility] = useState(new Array(4).fill("hidden"));
-    const [hiddenCardVisibility,setHiddenCardVisibility] = useState(new Array(4).fill("hidden"));
+    const [frontCardVisibility, setFrontCardVisibility] = useState(new Array(4).fill("hidden"));
+    const [hiddenCardVisibility, setHiddenCardVisibility] = useState(new Array(4).fill("hidden"));
 
     const [players, setPlayers] = useState(new Array(4).fill(""));
     const [player, setPlayer] = useState("");
@@ -96,26 +96,23 @@ const Board = () => {
 
     function handleActionsVisibility() {
         let actionsVisibility = new Array(3).fill(true);
-        if(!isBanker){
+        if (!isBanker) {
             actionsVisibility[0] = false;
             actionsVisibility[1] = true;
             actionsVisibility[2] = true;
-        }else{
+        } else {
             actionsVisibility[0] = true;
             actionsVisibility[1] = false;
             actionsVisibility[2] = false;
         }
-        
+
 
 
         return actionsVisibility;
     }
 
     function setInitialStateOfGame() {
-        var newPlayers = [...players];
-        newPlayers[0].name = playerName;
-
-        setPlayers(newPlayers);
+        
 
         let newBankVisibility = [...bankVisibility];
         newBankVisibility[0] = "visible";
@@ -129,10 +126,90 @@ const Board = () => {
         setLoginVisibility("hidden");
         setCreateOrJoinVisibility("visible");
     }
+
+    function refreshPlayersState(sessionID : number) {
+        axios.get('http://localhost:3000/sessions/' + sessionID + '?')
+            .then(session => {
+                switch (session.data.players.length) {
+
+                    case 2:
+                        for (let i = 0; i < session.data.players.length; i++) {
+                            if (session.data.players_session[i].position_in_board !== positionInBoard) {
+
+                                if (session.data.players_session[i].position_in_board === 0) {
+
+                                    axios.get('http://localhost:3000/players/' + session.data.players_session[i].player_id + '?')
+                                        .then(player => {
+                                            let newTreasureP4 = [...treasureP4];
+                                            newTreasureP4[0] = player.data.treasure.chips100_amount;
+                                            newTreasureP4[1] = player.data.treasure.chips250_amount;
+                                            newTreasureP4[2] = player.data.treasure.chips500_amount;
+                                            newTreasureP4[3] = player.data.treasure.chips1k_amount;
+                                            newTreasureP4[4] = player.data.treasure.chips5k_amount;
+                                            setTreasureP4(newTreasureP4);
+
+                                            setTotalTreasureP4(player.data.treasure.total);
+                                            setPlayer4Name(player.data.name);
+
+                                            let newChipsVisibilityP4 = [...chipsVisibilityP4];
+                                            newChipsVisibilityP4.fill("visible");
+                                            setChipsVisibilityP4(newChipsVisibilityP4);
+
+                                            let newPlayersVisibility = [...playersVisibility];
+                                            newPlayersVisibility[0] = "visible";
+                                            newPlayersVisibility[3] = "visible";
+                                            setPlayersVisibility(newPlayersVisibility);
+
+
+                                        });
+
+
+                                }
+                                if (session.data.players_session[i].position_in_board === 1) {
+                                    axios.get('http://localhost:3000/players/' + session.data.players_session[i].player_id + '?')
+                                        .then(player => {
+                                            let newTreasureP2 = [...treasureP2];
+                                            newTreasureP2[0] = player.data.treasure.chips100_amount;
+                                            newTreasureP2[1] = player.data.treasure.chips250_amount;
+                                            newTreasureP2[2] = player.data.treasure.chips500_amount;
+                                            newTreasureP2[3] = player.data.treasure.chips1k_amount;
+                                            newTreasureP2[4] = player.data.treasure.chips5k_amount;
+                                            setTreasureP2(newTreasureP2);
+
+                                            setTotalTreasureP2(player.data.treasure.total);
+                                            setPlayer2Name(player.data.player.name);
+                                            console.log(player2Name);
+
+                                            let newChipsVisibilityP2 = [...chipsVisibilityP2];
+                                            newChipsVisibilityP2.fill("visible");
+                                            setChipsVisibilityP2(newChipsVisibilityP2);
+
+                                            let newPlayersVisibility = [...playersVisibility];
+                                            newPlayersVisibility[1] = "visible";
+                                            newPlayersVisibility[0] = "visible";
+                                            setPlayersVisibility(newPlayersVisibility);
+                                        });
+                                }
+                            }
+
+                        }
+                        break;
+                    case 3:
+                        break;
+                    case 4:
+                        break;
+                }
+            });
+
+
+
+    }
+
+
     function createGame() {
         setCreateOrJoinVisibility("hidden");
         setGameBoardVisibility("visible");
-
+        let sessionID : number;
 
         axios.get('http://localhost:3000/players/' + playerID + '?')
             .then(response => {
@@ -162,8 +239,10 @@ const Board = () => {
                         const player_session = {
                             player_id: playerID,
                             session_id: session_response.data.session.id,
-                            position_in_board : 0
+                            position_in_board: 0
                         };
+                        positionInBoard = 0;
+                        sessionID = session_response.data.session.id;
                         setCurrentSessionID(session_response.data.session.id);
                         axios.post('http://localhost:3000/player_sessions', { player_session });
 
@@ -185,6 +264,9 @@ const Board = () => {
 
 
         setInitialStateOfGame();
+        setInterval(() => {
+            refreshPlayersState(sessionID);
+          }, 1000);
     }
     function joinGame(session_id: number) {
         setCreateOrJoinVisibility("hidden");
@@ -203,16 +285,17 @@ const Board = () => {
                         const player_session = {
                             player_id: playerID,
                             session_id: session_id,
-                            position_in_board : 1
+                            position_in_board: 1
                         };
+                        positionInBoard = 1;
                         axios.post('http://localhost:3000/player_sessions', { player_session });
 
                         //Obtengo datos del player nuevo.
                         axios.get('http://localhost:3000/players/' + playerID + '?')
                             .then(player_responseP1 => {
-                                console.log("Datos de player que se une: "+player_responseP1.data);
-                                
-                                
+                                console.log("Datos de player que se une: " + player_responseP1.data);
+
+
                                 let newTreasureP1 = [...treasureP1];
                                 newTreasureP1[0] = player_responseP1.data.treasure.chips100_amount;
                                 newTreasureP1[1] = player_responseP1.data.treasure.chips250_amount;
@@ -221,7 +304,7 @@ const Board = () => {
                                 newTreasureP1[4] = player_responseP1.data.treasure.chips5k_amount;
                                 setTreasureP1(newTreasureP1);
                                 setTotalTreasure(player_responseP1.data.treasure.total);
-                                
+
                                 setIsBanker(false);
 
                                 setActionsVisibility(handleActionsVisibility);
@@ -229,11 +312,11 @@ const Board = () => {
                             });
 
                         //Muestro el otro player
-                        for(let i=0;i<session_response.data.players.length;i++){
-                            if(session_response.data.players_session[i].position_in_board===0){
+                        for (let i = 0; i < session_response.data.players.length; i++) {
+                            if (session_response.data.players_session[i].position_in_board === 0) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP4 => {
-                                        console.log("Datos de player que creo la partida: "+player_responseP4.data);
+                                        console.log("Datos de player que creo la partida: " + player_responseP4.data);
                                         let newTreasureP4 = [...treasureP4];
                                         newTreasureP4[0] = player_responseP4.data.treasure.chips100_amount;
                                         newTreasureP4[1] = player_responseP4.data.treasure.chips250_amount;
@@ -246,16 +329,16 @@ const Board = () => {
                                         let newChipsVisibilityP4 = [...chipsVisibilityP4];
                                         newChipsVisibilityP4.fill("visible");
                                         setChipsVisibilityP4(newChipsVisibilityP4);
-                                        
+
                                         setPlayer4Name(player_responseP4.data.player.name);
-                                        
+
                                     });
-                                
+
                             }
                         }
                         let newPlayersVisibility = [...playersVisibility];
                         newPlayersVisibility[0] = "visible";
-                        newPlayersVisibility[3] = "visible"; 
+                        newPlayersVisibility[3] = "visible";
                         setPlayersVisibility(newPlayersVisibility);
 
                         break;
@@ -265,16 +348,17 @@ const Board = () => {
                         const player_session = {
                             player_id: playerID,
                             session_id: session_id,
-                            position_in_board : 2
+                            position_in_board: 2
                         };
+                        positionInBoard = 2
                         axios.post('http://localhost:3000/player_sessions', { player_session });
 
                         //Obtengo datos del player nuevo.
                         axios.get('http://localhost:3000/players/' + playerID + '?')
                             .then(player_responseP1 => {
-                                console.log("Datos de player que se une: "+player_responseP1.data);
-                                
-                                
+                                console.log("Datos de player que se une: " + player_responseP1.data);
+
+
                                 let newTreasureP1 = [...treasureP1];
                                 newTreasureP1[0] = player_responseP1.data.treasure.chips100_amount;
                                 newTreasureP1[1] = player_responseP1.data.treasure.chips250_amount;
@@ -283,7 +367,7 @@ const Board = () => {
                                 newTreasureP1[4] = player_responseP1.data.treasure.chips5k_amount;
                                 setTreasureP1(newTreasureP1);
                                 setTotalTreasure(player_responseP1.data.treasure.total);
-                                
+
                                 setIsBanker(false);
 
                                 setActionsVisibility(handleActionsVisibility);
@@ -291,11 +375,11 @@ const Board = () => {
                             });
 
                         //Muestro el otro player
-                        for(let i=0;i<session_response.data.players.length;i++){
-                            if(session_response.data.players_session[i].position_in_board===0){
+                        for (let i = 0; i < session_response.data.players.length; i++) {
+                            if (session_response.data.players_session[i].position_in_board === 0) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP3 => {
-                                        console.log("Datos de player que creo la partida: "+player_responseP3.data);
+                                        console.log("Datos de player que creo la partida: " + player_responseP3.data);
                                         let newTreasureP3 = [...treasureP3];
                                         newTreasureP3[0] = player_responseP3.data.treasure.chips100_amount;
                                         newTreasureP3[1] = player_responseP3.data.treasure.chips250_amount;
@@ -308,16 +392,16 @@ const Board = () => {
                                         let newChipsVisibilityP3 = [...chipsVisibilityP3];
                                         newChipsVisibilityP3.fill("visible");
                                         setChipsVisibilityP3(newChipsVisibilityP3);
-                                        
+
                                         setPlayer3Name(player_responseP3.data.player.name);
-                                        
+
                                     });
-                                
+
                             }
-                            if(session_response.data.players_session[i].position_in_board===1){
+                            if (session_response.data.players_session[i].position_in_board === 1) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP4 => {
-                                        console.log("Datos de player que creo la partida: "+player_responseP4.data);
+                                        console.log("Datos de player que creo la partida: " + player_responseP4.data);
                                         let newTreasureP4 = [...treasureP4];
                                         newTreasureP4[0] = player_responseP4.data.treasure.chips100_amount;
                                         newTreasureP4[1] = player_responseP4.data.treasure.chips250_amount;
@@ -330,37 +414,38 @@ const Board = () => {
                                         let newChipsVisibilityP4 = [...chipsVisibilityP4];
                                         newChipsVisibilityP4.fill("visible");
                                         setChipsVisibilityP4(newChipsVisibilityP4);
-                                        
+
                                         setPlayer4Name(player_responseP4.data.player.name);
-                                        
+
                                     });
-                                
+
                             }
                         }
                         let newPlayersVisibility = [...playersVisibility];
                         newPlayersVisibility[0] = "visible";
                         newPlayersVisibility[2] = "visible";
-                        newPlayersVisibility[3] = "visible"; 
+                        newPlayersVisibility[3] = "visible";
                         setPlayersVisibility(newPlayersVisibility);
 
                         break;
-                   
+
                     }
                     case 3: {
                         //Unirse a partida
                         const player_session = {
                             player_id: playerID,
                             session_id: session_id,
-                            position_in_board : 3
+                            position_in_board: 3
                         };
+                        positionInBoard = 3;
                         axios.post('http://localhost:3000/player_sessions', { player_session });
 
                         //Obtengo datos del player nuevo.
                         axios.get('http://localhost:3000/players/' + playerID + '?')
                             .then(player_responseP1 => {
-                                console.log("Datos de player que se une: "+player_responseP1.data);
-                                
-                                
+                                console.log("Datos de player que se une: " + player_responseP1.data);
+
+
                                 let newTreasureP1 = [...treasureP1];
                                 newTreasureP1[0] = player_responseP1.data.treasure.chips100_amount;
                                 newTreasureP1[1] = player_responseP1.data.treasure.chips250_amount;
@@ -369,7 +454,7 @@ const Board = () => {
                                 newTreasureP1[4] = player_responseP1.data.treasure.chips5k_amount;
                                 setTreasureP1(newTreasureP1);
                                 setTotalTreasure(player_responseP1.data.treasure.total);
-                                
+
                                 setIsBanker(false);
 
                                 setActionsVisibility(handleActionsVisibility);
@@ -377,11 +462,11 @@ const Board = () => {
                             });
 
                         //Muestro el otro player
-                        for(let i=0;i<session_response.data.players.length;i++){
-                            if(session_response.data.players_session[i].position_in_board===0){
+                        for (let i = 0; i < session_response.data.players.length; i++) {
+                            if (session_response.data.players_session[i].position_in_board === 0) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP2 => {
-                                        console.log("Datos de player que creo la partida: "+player_responseP2.data);
+                                        console.log("Datos de player que creo la partida: " + player_responseP2.data);
                                         let newTreasureP2 = [...treasureP2];
                                         newTreasureP2[0] = player_responseP2.data.treasure.chips100_amount;
                                         newTreasureP2[1] = player_responseP2.data.treasure.chips250_amount;
@@ -394,16 +479,16 @@ const Board = () => {
                                         let newChipsVisibilityP2 = [...chipsVisibilityP2];
                                         newChipsVisibilityP2.fill("visible");
                                         setChipsVisibilityP2(newChipsVisibilityP2);
-                                        
+
                                         setPlayer2Name(player_responseP2.data.player.name);
-                                        
+
                                     });
-                                
+
                             }
-                            if(session_response.data.players_session[i].position_in_board===1){
+                            if (session_response.data.players_session[i].position_in_board === 1) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP3 => {
-                                        console.log("Datos de player que creo la partida: "+player_responseP3.data);
+                                        console.log("Datos de player que creo la partida: " + player_responseP3.data);
                                         let newTreasureP3 = [...treasureP3];
                                         newTreasureP3[0] = player_responseP3.data.treasure.chips100_amount;
                                         newTreasureP3[1] = player_responseP3.data.treasure.chips250_amount;
@@ -416,16 +501,16 @@ const Board = () => {
                                         let newChipsVisibilityP3 = [...chipsVisibilityP3];
                                         newChipsVisibilityP3.fill("visible");
                                         setChipsVisibilityP3(newChipsVisibilityP3);
-                                        
+
                                         setPlayer3Name(player_responseP3.data.player.name);
-                                        
+
                                     });
-                                
+
                             }
-                            if(session_response.data.players_session[i].position_in_board===2){
+                            if (session_response.data.players_session[i].position_in_board === 2) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP4 => {
-                                        console.log("Datos de player que creo la partida: "+player_responseP4.data);
+                                        console.log("Datos de player que creo la partida: " + player_responseP4.data);
                                         let newTreasureP4 = [...treasureP4];
                                         newTreasureP4[0] = player_responseP4.data.treasure.chips100_amount;
                                         newTreasureP4[1] = player_responseP4.data.treasure.chips250_amount;
@@ -438,18 +523,18 @@ const Board = () => {
                                         let newChipsVisibilityP4 = [...chipsVisibilityP4];
                                         newChipsVisibilityP4.fill("visible");
                                         setChipsVisibilityP4(newChipsVisibilityP4);
-                                        
+
                                         setPlayer4Name(player_responseP4.data.player.name);
-                                        
+
                                     });
-                                
+
                             }
                         }
                         let newPlayersVisibility = [...playersVisibility];
                         newPlayersVisibility[0] = "visible";
-                        newPlayersVisibility[1] = "visible"; 
+                        newPlayersVisibility[1] = "visible";
                         newPlayersVisibility[2] = "visible";
-                        newPlayersVisibility[3] = "visible"; 
+                        newPlayersVisibility[3] = "visible";
                         setPlayersVisibility(newPlayersVisibility);
                         break;
                     }
@@ -661,7 +746,7 @@ const Board = () => {
                             <label style={{ position: "relative", top: "50px" }}>{player3Name}</label>
                         </div>
 
-                        <div className='grid-item' style={{visibility:hiddenCardVisibility[2]}}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[2] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -670,7 +755,7 @@ const Board = () => {
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{visibility:frontCardVisibility[2]}}>
+                        <div className='grid-item' style={{ visibility: frontCardVisibility[2] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -782,7 +867,7 @@ const Board = () => {
                             <label style={{ position: "relative", top: "50px" }}>{player2Name}</label>
                         </div>
 
-                        <div className='grid-item' style={{visibility:hiddenCardVisibility[1]}}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[1] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -791,7 +876,7 @@ const Board = () => {
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{visibility:frontCardVisibility[1]}}>
+                        <div className='grid-item' style={{ visibility: frontCardVisibility[1] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -903,7 +988,7 @@ const Board = () => {
                             <label style={{ position: "relative", top: "50px" }}>{player4Name}</label>
                         </div>
 
-                        <div className='grid-item' style={{visibility:hiddenCardVisibility[2]}}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[2] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -912,7 +997,7 @@ const Board = () => {
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{visibility:frontCardVisibility[2]}}>
+                        <div className='grid-item' style={{ visibility: frontCardVisibility[2] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -1026,7 +1111,7 @@ const Board = () => {
                                 <label>BANK</label>
                             </div>
                         </div>
-                        <div className='grid-item' style={{visibility:hiddenCardVisibility[0]}}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[0] }}>
                             <div className='points-container'>
                                 <label>5</label>
                             </div>
@@ -1035,7 +1120,7 @@ const Board = () => {
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{visibility:frontCardVisibility[0]}}>
+                        <div className='grid-item' style={{ visibility: frontCardVisibility[0] }}>
                             <div className='points-container'>
                                 <label>5</label>
                             </div>
