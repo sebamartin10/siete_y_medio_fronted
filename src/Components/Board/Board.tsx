@@ -1,3 +1,4 @@
+/* eslint-disable no-loop-func */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import '../Board/Board.css';
 import Error from '../Error/Error';
@@ -13,6 +14,7 @@ import LocalGameService from '../../Services/LocalGameService';
 import { Player } from '../../Models/Player';
 import Treasure from '../../Models/Treasure';
 import axios from 'axios';
+import { url } from 'inspector';
 
 
 
@@ -30,23 +32,54 @@ const Board = () => {
     let bank: Boolean;
     let positionInBoard: number = 0;
 
+    let sessionID: number = 0;
+    let roundID: number = 0;
+
+    let player2ID: number = 0;
+    let player3ID: number = 0;
+    let player4ID: number = 0;
+
+
+
+    const imagePath = "img/cards/oro/";
 
 
     const [playerName, setPlayerName] = useState("");
     const [playerID, setPlayerID] = useState(0);
+    const [myHandID, setMyHandID] = useState(0);
+
     const [player2Name, setPlayer2Name] = useState("");
     const [player3Name, setPlayer3Name] = useState("");
     const [player4Name, setPlayer4Name] = useState("");
+    const [playerOnTheLeft, setPlayerOnTheLeft] = useState("");
+
+    const [feedbackP1, setFeedbackP1] = useState("Waiting");
+    const [feedbackP2, setFeedbackP2] = useState("Waiting");
+    const [feedbackP3, setFeedbackP3] = useState("Waiting");
+    const [feedbackP4, setFeedbackP4] = useState("Waiting");
 
     const [currentSessionID, setCurrentSessionID] = useState(0);
+    const [currentRoundID, setCurrentRoundID] = useState(0);
+    const [turnOf, setTurnOf] = useState("");
 
     const [playersVisibility, setPlayersVisibility] = useState(new Array(4).fill("hidden"));
     const [errorPanelVisibility, setErrorPanelVisibility] = useState<any>("hidden");
     const [gameBoardVisibility, setGameBoardVisibility] = useState<any>("hidden");
     const [loginVisibility, setLoginVisibility] = useState<any>("visible");
     const [createOrJoinVisibility, setCreateOrJoinVisibility] = useState<any>("hidden");
-    const [frontCardVisibility, setFrontCardVisibility] = useState(new Array(4).fill("hidden"));
-    const [hiddenCardVisibility, setHiddenCardVisibility] = useState(new Array(4).fill("hidden"));
+
+    const [frontCardVisibilityP1, setFrontCardVisibilityP1] = useState<any>("hidden");
+    const [frontCardImageP1, setFrontCardImageP1] = useState("");
+    const [hiddenCardVisibilityP1, setHiddenCardVisibilityP1] = useState<any>("hidden");
+    const [hiddenCardPoints, setHiddenCardPoints] = useState(0);
+    const [visibleCardPoints, setVisibleCardPoints] = useState(0);
+    const [totalCardPoints,setTotalCardPoints] = useState(0);
+
+    const [frontCardVisibility, setFrontCardVisibility] = useState(new Array(3).fill("hidden"));
+    const [hiddenCardVisibility, setHiddenCardVisibility] = useState(new Array(3).fill("hidden"));
+    const [frontCardImageP2, setFrontCardImageP2] = useState("");
+    const [frontCardImageP3, setFrontCardImageP3] = useState("");
+    const [frontCardImageP4, setFrontCardImageP4] = useState("");
 
     const [players, setPlayers] = useState(new Array(4).fill(""));
     const [player, setPlayer] = useState("");
@@ -81,8 +114,10 @@ const Board = () => {
     const [chipsVisibilityP3, setChipsVisibilityP3] = useState(new Array(5).fill("hidden"));
     const [chipsVisibilityP4, setChipsVisibilityP4] = useState(new Array(5).fill("hidden"));
 
+    const [chipsInteractable, setChipsInteractable] = useState(new Array(5).fill(false));
 
-    const [actionsVisibility, setActionsVisibility] = useState(handleActionsVisibility());
+
+    const [actionsVisibility, setActionsVisibility] = useState([true, false, true]);
     const [bankVisibility, setBankVisibility] = useState(new Array(4).fill("hidden"));
 
 
@@ -94,29 +129,306 @@ const Board = () => {
         setCurrentSessionID(event.target.value);
     }
 
-    function handleActionsVisibility() {
-        let actionsVisibility = new Array(3).fill(true);
-        if (!isBanker) {
-            actionsVisibility[0] = false;
-            actionsVisibility[1] = true;
-            actionsVisibility[2] = true;
+    function createRound(){
+
+    }
+    function check_results(){
+        axios.get("http://localhost:3000/rounds/"+currentRoundID+"?")
+            .then(currentRound => {
+                for(let i=0;i<currentRound.data.player_hands.length;i++){
+                    if(currentRound.data.player_hands[i].player_id!==playerID){
+                        axios.get("http://localhost:3000/player_hands/"+currentRound.data.player_hands[i].id+"?")
+                            .then(player_hand=>{
+                                if(player_hand.data.player_hand.total_points>totalCardPoints){
+                                    //Debo pagarle
+                                    console.log("Le debo pagar");
+                                    let chips100_amount : number = currentRound.data.player_bets[i].chips100_amount;
+                                    let chips250_amount : number = currentRound.data.player_bets[i].chips250_amount;
+                                    let chips500_amount : number = currentRound.data.player_bets[i].chips500_amount;
+                                    let chips1k_amount : number = currentRound.data.player_bets[i].chips1k_amount;
+                                    let chips5k_amount : number = currentRound.data.player_bets[i].chips5k_amount;
+
+                                    let chips100_amount_to_Add : number = chips100_amount*2;
+                                    let chips250_amount_to_Add : number = chips250_amount*2;
+                                    let chips500_amount_to_Add : number = chips500_amount*2;
+                                    let chips1k_amount_to_Add : number = chips1k_amount*2;
+                                    let chips5k_amount_to_Add : number = chips5k_amount*2;
+
+                                    axios.get("http://localhost:3000/treasures/"+player_hand.data.player_hand.player_id)
+                                        .then(treasure_response => {
+                                            const treasure = {
+                                                chips100_amount : treasure_response.data.treasure.chips100_amount + chips100_amount_to_Add,
+                                                chips250_amount : treasure_response.data.treasure.chips250_amount + chips250_amount_to_Add,
+                                                chips500_amount : treasure_response.data.treasure.chips500_amount + chips500_amount_to_Add,
+                                                chips1k_amount : treasure_response.data.treasure.chips1k_amount + chips1k_amount_to_Add,
+                                                chips5k_amount : treasure_response.data.treasure.chips5k_amount + chips5k_amount_to_Add,
+                                                total : (chips100_amount*100) + (chips250_amount*250) + (chips500_amount*500) + (chips1k_amount*1000) + (chips5k_amount*5000)
+                                            }
+                                            axios.put("http://localhost:3000/treasures/"+treasure_response.data.treasure.id+"?",{treasure})
+                                        });
+                                    axios.get("http://localhost:3000/treasures/"+playerID+"?")
+                                        .then(myTreasure => {
+                                            let new_chips100_amount = myTreasure.data.treasure.chips100_amount - chips100_amount;
+                                            let new_chips250_amount= myTreasure.data.treasure.chips250_amount - chips250_amount;
+                                            let new_chips500_amount= myTreasure.data.treasure.chips500_amount - chips500_amount;
+                                            let new_chips1k_amount = myTreasure.data.treasure.chips1k_amount - chips1k_amount;
+                                            let new_chips5k_amount = myTreasure.data.treasure.chips5k_amount - chips5k_amount;
+                                            let newTotal = (new_chips100_amount*100)+(new_chips250_amount*250)+(new_chips500_amount*500)+(new_chips1k_amount*1000)+(new_chips5k_amount*5000);
+                                            const treasure = {
+                                                chips100_amount : new_chips100_amount,
+                                                chips250_amount : new_chips250_amount,
+                                                chips500_amount : new_chips500_amount,
+                                                chips1k_amount : new_chips1k_amount,
+                                                chips5k_amount : new_chips5k_amount,
+                                                total : newTotal
+                                            }
+                                            axios.put("http://localhost:3000/treasures/"+myTreasure.data.treasure.id+"?",{treasure})
+                                                .then(treasure_updated=>{
+                                                    let newTreasureP1 = [...treasureP1];
+                                                    newTreasureP1[0] = treasure_updated.data.treasure.chips100_amount;
+                                                    newTreasureP1[1] = treasure_updated.data.treasure.chips250_amount;
+                                                    newTreasureP1[2] = treasure_updated.data.treasure.chips500_amount;
+                                                    newTreasureP1[3] = treasure_updated.data.treasure.chips1k_amount;
+                                                    newTreasureP1[4] = treasure_updated.data.treasure.chips5k_amount;
+                                                    setTreasureP1(newTreasureP1)
+                                                    console.log("El nuevo total del tesoro es: "+treasure_updated.data.treasure.total);
+                                                    setTotalTreasure(treasure_updated.data.treasure.total);
+
+                                                    let newchipsVisibility = [...chipsVisibilityP1];
+                                                    newchipsVisibility.fill("hidden");
+                                                    setChipsVisibilityP1(newchipsVisibility);
+                                                })
+                                        })
+                                }
+                                else{
+                                    //Debo cobrarle
+                                    console.log("Le debo cobrar");
+                                    let chips100_amount_playerbet : number = currentRound.data.player_bets[i].chips100_amount;
+                                    let chips250_amount_playerbet : number = currentRound.data.player_bets[i].chips250_amount;
+                                    let chips500_amount_playerbet : number = currentRound.data.player_bets[i].chips500_amount;
+                                    let chips1k_amount_playerbet : number = currentRound.data.player_bets[i].chips1k_amount;
+                                    let chips5k_amount_playerbet : number = currentRound.data.player_bets[i].chips5k_amount;
+
+                                    
+                                    axios.get("http://localhost:3000/treasures/"+playerID+"?")
+                                        .then(treasure_response => {
+                                            let newTotal : number = ((treasure_response.data.treasure.chips100_amount + chips100_amount_playerbet)*100)+
+                                                                    ((treasure_response.data.treasure.chips250_amount + chips250_amount_playerbet)*250)+
+                                                                    ((treasure_response.data.treasure.chips500_amount + chips500_amount_playerbet)*500)+
+                                                                    ((treasure_response.data.treasure.chips1k_amount + chips1k_amount_playerbet)*1000)+
+                                                                    ((treasure_response.data.treasure.chips5k_amount + chips5k_amount_playerbet)*5000);
+                                         
+                                         
+                                            const treasure = {
+                                                chips100_amount : treasure_response.data.chips100_amount + chips100_amount_playerbet,
+                                                chips250_amount : treasure_response.data.chips250_amount + chips250_amount_playerbet,
+                                                chips500_amount : treasure_response.data.chips500_amount + chips500_amount_playerbet,
+                                                chips1k_amount : treasure_response.data.chips1k_amount + chips1k_amount_playerbet,
+                                                chips5k_amount : treasure_response.data.chips5k_amount + chips5k_amount_playerbet,
+                                                total : newTotal
+                                            };
+                                            
+                                           
+                                            axios.put("http://localhost:3000/treasures/"+treasure_response.data.treasure.id+"?",{treasure})
+                                                .then(treasure_updated_response=>{
+                                                    let newTreasureP1 = [...treasureP1];
+                                                    newTreasureP1[0] = treasure_updated_response.data.treasure.chips100_amount;
+                                                    newTreasureP1[1] = treasure_updated_response.data.treasure.chips250_amount;
+                                                    newTreasureP1[2] = treasure_updated_response.data.treasure.chips500_amount;
+                                                    newTreasureP1[3] = treasure_updated_response.data.treasure.chips1k_amount;
+                                                    newTreasureP1[4] = treasure_updated_response.data.treasure.chips5k_amount;
+                                                    setTreasureP1(newTreasureP1)
+                                                    console.log("El nuevo total del tesoro es: "+treasure_updated_response.data.treasure.total);
+                                                    setTotalTreasure(treasure_updated_response.data.treasure.total);
+
+                                                    let newchipsVisibility = [...chipsVisibilityP1];
+                                                    newchipsVisibility.fill("hidden");
+                                                    setChipsVisibilityP1(newchipsVisibility);
+                                                })
+
+                                            
+                                        });
+                                }
+                            })
+                    }
+                }
+            });
+    }
+    function pay_to_players(){
+        axios.get("http://localhost:3000/rounds/"+currentRoundID+"?")
+            .then(currentRound => {
+
+            });
+    }
+    function get_money_from_players(){
+
+    }
+    function checkForTurn() {
+        axios.get('http://localhost:3000/sessions/' + sessionID + '?')
+            .then(session => {
+                for (let i = 0; i < session.data.rounds.length; i++) {
+                    if (session.data.rounds[i].is_current_round && session.data.rounds[i].current_turn === playerName) {
+
+
+                        setFeedbackP1("Playing");
+                    }
+                }
+            });
+    }
+    function toggleActions(hit: boolean, bet: boolean, plant: boolean) {
+        let newActionsVisibility = [...actionsVisibility]
+        newActionsVisibility[0] = hit;
+        newActionsVisibility[1] = bet;
+        newActionsVisibility[2] = plant;
+        setActionsVisibility(newActionsVisibility);
+    }
+    function finishTurn() {
+        if (isBanker) {
+            console.log("Se termina la joda porque soy banca.");
+            check_results();
+           
+
         } else {
-            actionsVisibility[0] = true;
-            actionsVisibility[1] = false;
-            actionsVisibility[2] = false;
+            const round = {
+                current_turn: playerOnTheLeft
+            };
+
+            axios.put("http://localhost:3000/rounds/" + currentRoundID + "?", round)
+                .then(_ => {
+                    setFeedbackP1("Waiting");
+                    if (playerOnTheLeft === player2Name) {
+                        setFeedbackP2("Playing");
+                        setFeedbackP3("Waiting");
+                        setFeedbackP4("Waiting");
+                    } else if (playerOnTheLeft === player3Name) {
+                        setFeedbackP4("Waiting");
+                        setFeedbackP3("Playing");
+                        setFeedbackP2("Waiting");
+                    } else {
+                        setFeedbackP2("Waiting");
+                        setFeedbackP3("Waiting");
+                        setFeedbackP4("Playing");
+                    }
+                });
+            toggleActions(true, false, true);
+
         }
 
+    }
+    function finishRound() {
+
+    }
+
+    function hit() {
+        //Obtengo carta al azar
+        axios.get("http://localhost:3000/cards")
+            .then(cards => {
+                const card = cards.data[Math.floor(Math.random() * (9 - 0 + 1)) + 0];
+                var cardPoints: number = card.points;
+                setTotalCardPoints(cardPoints);
+                console.log("La ROund ID es: " + currentRoundID);
+                if (hiddenCardVisibilityP1 === "hidden") {
+                    console.log("Puntos de carta invisible: " + card.points);
+                    setHiddenCardVisibilityP1("visible");
+                    setHiddenCardPoints(card.points);
+                    const player_hand = {
+                        total_points: cardPoints,
+                        player_id: playerID,
+                        round_id: currentRoundID
+                    };
+                    axios.post("http://localhost:3000/player_hands", { player_hand })
+                        .then(player_hand_response => {
+                            setMyHandID(player_hand_response.data.player_hand.id);
 
 
-        return actionsVisibility;
+                            const player_card = {
+                                is_card_visible: false,
+                                player_hand_id: player_hand_response.data.player_hand.id,
+                                card_id: card.id
+                            };
+                            axios.post("http://localhost:3000/player_cards", { player_card });
+                        });
+
+                } else {
+                    setVisibleCardPoints(card.points);
+                    console.log("Puntos de carta visible: " + card.points);
+                    setFrontCardVisibilityP1("visible");
+                    let path: string = 'url("' + imagePath + card.denomination + ".png" + '")';
+
+                    setFrontCardImageP1(path);
+
+
+                    const player_card = {
+                        is_card_visible: true,
+                        player_hand_id: myHandID,
+                        card_id: card.id
+                    };
+                    axios.post("http://localhost:3000/player_cards", { player_card });
+
+                    axios.get("http://localhost:3000/player_hands/" + myHandID + "?")
+                        .then(player_hand_response => {
+                            let sum: number = player_hand_response.data.player_hand.total_points + cardPoints;
+                            setTotalCardPoints(sum);
+                            console.log("La suma de puntos es " + sum);
+
+                            const player_hand = {
+                                total_points: sum
+                            };
+                            axios.put("http://localhost:3000/player_hands/" + myHandID + "?", { player_hand });
+                            //Si se pasa de 7 y medio
+                            if (sum > 7.5) {
+                                finishTurn();
+
+                            }
+                        });
+
+
+                }
+
+            });
+
+
+
+
+
+    }
+
+    function bet() {
+        const player_bet = {
+            chips100_amount: chipsbet[0],
+            chips250_amount: chipsbet[1],
+            chips500_amount: chipsbet[2],
+            chips1k_amount: chipsbet[3],
+            chips5k_amount: chipsbet[4],
+            total: totalBetP1,
+            player_id: playerID,
+            round_id: currentRoundID
+        };
+
+        axios.post("http://localhost:3000/player_bets", { player_bet })
+            .then(player_bet => {
+                let newActionVisibility = [...actionsVisibility];
+                newActionVisibility[0] = false;
+                newActionVisibility[1] = true;
+                newActionVisibility[2] = false;
+                setActionsVisibility(newActionVisibility);
+
+                let newChipsInteractable = [...chipsInteractable];
+                newChipsInteractable.fill(true);
+                setChipsInteractable(newChipsInteractable);
+            });
+    }
+    function plant() {
+        finishTurn();
     }
 
     function setInitialStateOfGame() {
-        
+
 
         let newBankVisibility = [...bankVisibility];
         newBankVisibility[0] = "visible";
         setBankVisibility(newBankVisibility);
+        setIsBanker(true);
 
     }
     function login(name: string, pass: string) {
@@ -127,9 +439,10 @@ const Board = () => {
         setCreateOrJoinVisibility("visible");
     }
 
-    function refreshPlayersState(sessionID : number) {
+    function refreshPlayersState(sessionID: number) {
         axios.get('http://localhost:3000/sessions/' + sessionID + '?')
             .then(session => {
+
                 switch (session.data.players.length) {
 
                     case 2:
@@ -140,6 +453,7 @@ const Board = () => {
 
                                     axios.get('http://localhost:3000/players/' + session.data.players_session[i].player_id + '?')
                                         .then(player => {
+                                            player4ID = player.data.player.id;
                                             let newTreasureP4 = [...treasureP4];
                                             newTreasureP4[0] = player.data.treasure.chips100_amount;
                                             newTreasureP4[1] = player.data.treasure.chips250_amount;
@@ -149,7 +463,7 @@ const Board = () => {
                                             setTreasureP4(newTreasureP4);
 
                                             setTotalTreasureP4(player.data.treasure.total);
-                                            setPlayer4Name(player.data.name);
+                                            setPlayer4Name(player.data.player.name);
 
                                             let newChipsVisibilityP4 = [...chipsVisibilityP4];
                                             newChipsVisibilityP4.fill("visible");
@@ -160,14 +474,37 @@ const Board = () => {
                                             newPlayersVisibility[3] = "visible";
                                             setPlayersVisibility(newPlayersVisibility);
 
+                                            setPlayerOnTheLeft(player.data.player.name);
+
+                                            //Obtengo las apuestas
+                                            axios.get("http://localhost:3000/rounds/" + roundID + "?")
+                                                .then(response => {
+                                                    //console.log("Player 4 ID es: " + session.data.players_session[i].player_id+"y el que me guardo es"+player4ID);
+                                                    for (let i = 0; i < response.data.player_bets.length; i++) {
+                                                        if (response.data.player_bets[i].player_id === player4ID) {
+                                                            let newChipsBetP4 = [...chipsbetP4];
+                                                            newChipsBetP4[0] = response.data.player_bets[0].chips100_amount;
+                                                            newChipsBetP4[1] = response.data.player_bets[0].chips250_amount;
+                                                            newChipsBetP4[2] = response.data.player_bets[0].chips500_amount;
+                                                            newChipsBetP4[3] = response.data.player_bets[0].chips1k_amount;
+                                                            newChipsBetP4[4] = response.data.player_bets[0].chips5k_amount;
+                                                            setChipsBetP4(newChipsBetP4);
+                                                            setTotalBetP4(response.data.player_bets[0].total);
+                                                        }
+                                                    }
+
+                                                });
+
 
                                         });
+
 
 
                                 }
                                 if (session.data.players_session[i].position_in_board === 1) {
                                     axios.get('http://localhost:3000/players/' + session.data.players_session[i].player_id + '?')
                                         .then(player => {
+                                            player2ID = player.data.player.id;
                                             let newTreasureP2 = [...treasureP2];
                                             newTreasureP2[0] = player.data.treasure.chips100_amount;
                                             newTreasureP2[1] = player.data.treasure.chips250_amount;
@@ -178,7 +515,7 @@ const Board = () => {
 
                                             setTotalTreasureP2(player.data.treasure.total);
                                             setPlayer2Name(player.data.player.name);
-                                            console.log(player2Name);
+
 
                                             let newChipsVisibilityP2 = [...chipsVisibilityP2];
                                             newChipsVisibilityP2.fill("visible");
@@ -188,7 +525,59 @@ const Board = () => {
                                             newPlayersVisibility[1] = "visible";
                                             newPlayersVisibility[0] = "visible";
                                             setPlayersVisibility(newPlayersVisibility);
+
+                                            setFeedbackP2("Playing");
+
+                                            setPlayerOnTheLeft(player.data.player.name);
+
+                                            //Obtengo las apuestas
+                                            axios.get("http://localhost:3000/rounds/" + roundID + "?")
+                                                .then(response => {
+                                                    //console.log("Player 2 ID es: " + session.data.players_session[i].player_id+"y el que me guardo es " +player2ID);
+                                                    for (let i = 0; i < response.data.player_bets.length; i++) {
+                                                        if (response.data.player_bets[i].player_id === player2ID) {
+                                                            let newChipsBetP2 = [...chipsbetP2];
+                                                            newChipsBetP2[0] = response.data.player_bets[0].chips100_amount;
+                                                            newChipsBetP2[1] = response.data.player_bets[0].chips250_amount;
+                                                            newChipsBetP2[2] = response.data.player_bets[0].chips500_amount;
+                                                            newChipsBetP2[3] = response.data.player_bets[0].chips1k_amount;
+                                                            newChipsBetP2[4] = response.data.player_bets[0].chips5k_amount;
+                                                            setChipsBetP2(newChipsBetP2);
+                                                            setTotalBetP2(response.data.player_bets[0].total);
+                                                        }
+                                                    }
+                                                    //Obtengo las cartas que se le han dado al player
+                                                    for (let i = 0; i < response.data.player_hands.length; i++) {
+                                                       
+                                                        if (response.data.player_hands[i].player_id === player2ID) {
+
+                                                            axios.get("http://localhost:3000/player_hands/" + response.data.player_hands[i].id)
+                                                                .then(player_hand => {
+                                                                    if(player_hand.data.player_cards.length===1 && hiddenCardVisibility[0]==="hidden"){
+                                                                        let newHiddenCardsVisibility = [...hiddenCardVisibility];
+                                                                        newHiddenCardsVisibility[0] = "visible";
+                                                                        setHiddenCardVisibility(newHiddenCardsVisibility);
+                                                                    }
+                                                                    if(player_hand.data.player_cards.length>1){
+                                                                       
+                                                                        axios.get("http://localhost:3000/cards/" +  player_hand.data.player_cards[player_hand.data.player_cards.length-1].card_id)
+                                                                                .then(card => {
+                                                                                    
+                                                                                    let card_denomination = card.data.card.denomination;
+                                                                                    let path: string = 'url("' + imagePath + card_denomination + ".png" + '")';
+                                                                                    setFrontCardImageP2(path);
+                                                                                    let newFrontCardsVisibility = [...frontCardVisibility];
+                                                                                    newFrontCardsVisibility[0] = "visible";
+                                                                                    setFrontCardVisibility(newFrontCardsVisibility);
+                                                                                });
+                                                                    }
+                                                                    
+                                                                });
+                                                        }
+                                                    }
+                                                });
                                         });
+
                                 }
                             }
 
@@ -209,12 +598,13 @@ const Board = () => {
     function createGame() {
         setCreateOrJoinVisibility("hidden");
         setGameBoardVisibility("visible");
-        let sessionID : number;
+
+        toggleActions(false,true,false);
+        
 
         axios.get('http://localhost:3000/players/' + playerID + '?')
             .then(response => {
 
-                console.log(response.data)
 
                 let newTreasureP1 = [...treasureP1];
                 newTreasureP1[0] = response.data.treasure.chips100_amount;
@@ -242,19 +632,25 @@ const Board = () => {
                             position_in_board: 0
                         };
                         positionInBoard = 0;
-                        sessionID = session_response.data.session.id;
+
                         setCurrentSessionID(session_response.data.session.id);
+                        sessionID = session_response.data.session.id;
+                        console.log("Current session ID: " + sessionID);
                         axios.post('http://localhost:3000/player_sessions', { player_session });
 
                         const round = {
                             bank: playerName,
                             is_current_round: true,
                             previous_turn: "",
-                            current_turn: playerName,
+                            current_turn: "",
                             next_turn: "",
                             session_id: session_response.data.session.id
                         };
-                        axios.post('http://localhost:3000/rounds', { round });
+                        axios.post('http://localhost:3000/rounds', { round })
+                            .then(round => {
+                                setCurrentRoundID(round.data.round.id);
+                                roundID = round.data.round.id;
+                            })
                     }
 
                     )
@@ -266,15 +662,17 @@ const Board = () => {
         setInitialStateOfGame();
         setInterval(() => {
             refreshPlayersState(sessionID);
-          }, 1000);
+            checkForTurn();
+            
+        }, 1000);
     }
     function joinGame(session_id: number) {
         setCreateOrJoinVisibility("hidden");
         setGameBoardVisibility("visible");
-
+        sessionID = session_id;
         axios.get('http://localhost:3000/sessions/' + session_id + '?')
             .then(session_response => {
-                console.log("Players : " + session_response.data.players.length);
+
 
 
 
@@ -293,7 +691,7 @@ const Board = () => {
                         //Obtengo datos del player nuevo.
                         axios.get('http://localhost:3000/players/' + playerID + '?')
                             .then(player_responseP1 => {
-                                console.log("Datos de player que se une: " + player_responseP1.data);
+
 
 
                                 let newTreasureP1 = [...treasureP1];
@@ -306,17 +704,35 @@ const Board = () => {
                                 setTotalTreasure(player_responseP1.data.treasure.total);
 
                                 setIsBanker(false);
+                                setFeedbackP1("Playing");
 
-                                setActionsVisibility(handleActionsVisibility);
+
 
                             });
+
+                        //Actualizo la ronda actual para darle el turno al player que se une.
+                        for (let i = 0; i < session_response.data.rounds.length; i++) {
+                            if (session_response.data.rounds[i].is_current_round) {
+                                const roundUpdated = {
+                                    current_turn: playerName
+                                };
+
+                                axios.put("http://localhost:3000/rounds/" + session_response.data.rounds[i].id + "?", roundUpdated)
+                                    .then(round => {
+                                        roundID = round.data.round.id;
+                                        setCurrentRoundID(round.data.round.id);
+
+                                    });
+                            }
+                        }
 
                         //Muestro el otro player
                         for (let i = 0; i < session_response.data.players.length; i++) {
                             if (session_response.data.players_session[i].position_in_board === 0) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP4 => {
-                                        console.log("Datos de player que creo la partida: " + player_responseP4.data);
+                                        player4ID = session_response.data.players_session[i].player_id;
+
                                         let newTreasureP4 = [...treasureP4];
                                         newTreasureP4[0] = player_responseP4.data.treasure.chips100_amount;
                                         newTreasureP4[1] = player_responseP4.data.treasure.chips250_amount;
@@ -331,7 +747,7 @@ const Board = () => {
                                         setChipsVisibilityP4(newChipsVisibilityP4);
 
                                         setPlayer4Name(player_responseP4.data.player.name);
-
+                                        setFeedbackP4("Waiting");
                                     });
 
                             }
@@ -356,7 +772,7 @@ const Board = () => {
                         //Obtengo datos del player nuevo.
                         axios.get('http://localhost:3000/players/' + playerID + '?')
                             .then(player_responseP1 => {
-                                console.log("Datos de player que se une: " + player_responseP1.data);
+
 
 
                                 let newTreasureP1 = [...treasureP1];
@@ -370,7 +786,7 @@ const Board = () => {
 
                                 setIsBanker(false);
 
-                                setActionsVisibility(handleActionsVisibility);
+
 
                             });
 
@@ -379,7 +795,8 @@ const Board = () => {
                             if (session_response.data.players_session[i].position_in_board === 0) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP3 => {
-                                        console.log("Datos de player que creo la partida: " + player_responseP3.data);
+
+                                        player3ID = session_response.data.players_session[i].player_id;
                                         let newTreasureP3 = [...treasureP3];
                                         newTreasureP3[0] = player_responseP3.data.treasure.chips100_amount;
                                         newTreasureP3[1] = player_responseP3.data.treasure.chips250_amount;
@@ -401,7 +818,8 @@ const Board = () => {
                             if (session_response.data.players_session[i].position_in_board === 1) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP4 => {
-                                        console.log("Datos de player que creo la partida: " + player_responseP4.data);
+
+                                        player4ID = session_response.data.players_session[i].player_id;
                                         let newTreasureP4 = [...treasureP4];
                                         newTreasureP4[0] = player_responseP4.data.treasure.chips100_amount;
                                         newTreasureP4[1] = player_responseP4.data.treasure.chips250_amount;
@@ -443,7 +861,7 @@ const Board = () => {
                         //Obtengo datos del player nuevo.
                         axios.get('http://localhost:3000/players/' + playerID + '?')
                             .then(player_responseP1 => {
-                                console.log("Datos de player que se une: " + player_responseP1.data);
+
 
 
                                 let newTreasureP1 = [...treasureP1];
@@ -457,7 +875,7 @@ const Board = () => {
 
                                 setIsBanker(false);
 
-                                setActionsVisibility(handleActionsVisibility);
+
 
                             });
 
@@ -466,7 +884,8 @@ const Board = () => {
                             if (session_response.data.players_session[i].position_in_board === 0) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP2 => {
-                                        console.log("Datos de player que creo la partida: " + player_responseP2.data);
+
+                                        player2ID = session_response.data.players_session[i].player_id;
                                         let newTreasureP2 = [...treasureP2];
                                         newTreasureP2[0] = player_responseP2.data.treasure.chips100_amount;
                                         newTreasureP2[1] = player_responseP2.data.treasure.chips250_amount;
@@ -488,7 +907,8 @@ const Board = () => {
                             if (session_response.data.players_session[i].position_in_board === 1) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP3 => {
-                                        console.log("Datos de player que creo la partida: " + player_responseP3.data);
+
+                                        player3ID = session_response.data.players_session[i].player_id;
                                         let newTreasureP3 = [...treasureP3];
                                         newTreasureP3[0] = player_responseP3.data.treasure.chips100_amount;
                                         newTreasureP3[1] = player_responseP3.data.treasure.chips250_amount;
@@ -510,7 +930,8 @@ const Board = () => {
                             if (session_response.data.players_session[i].position_in_board === 2) {
                                 axios.get('http://localhost:3000/players/' + session_response.data.players_session[i].player_id + '?')
                                     .then(player_responseP4 => {
-                                        console.log("Datos de player que creo la partida: " + player_responseP4.data);
+
+                                        player4ID = session_response.data.players_session[i].player_id;
                                         let newTreasureP4 = [...treasureP4];
                                         newTreasureP4[0] = player_responseP4.data.treasure.chips100_amount;
                                         newTreasureP4[1] = player_responseP4.data.treasure.chips250_amount;
@@ -544,6 +965,11 @@ const Board = () => {
                     }
                 }
             })
+        setInterval(() => {
+            refreshPlayersState(currentSessionID);
+            checkForTurn();
+            
+        }, 1000);
     }
     function createPlayer(name: string) {
         const player = {
@@ -638,6 +1064,8 @@ const Board = () => {
     return (
         <div className="board">
             <label>Session ID : {currentSessionID}</label>
+            <label>Round ID: {currentRoundID}</label>
+            <label>Hand ID: {myHandID}</label>
             <div className='errorPanel' style={{ visibility: errorPanelVisibility }}>
                 <label>Esto es un error del servidor.</label>
             </div>
@@ -702,7 +1130,7 @@ const Board = () => {
                         <label>Bet : $</label>
                         <label>{totalBetP3}</label>
                         <div className='hand-resultP3'>
-                            <label>WON</label>
+                            <label>{feedbackP3}</label>
                         </div>
                     </div>
 
@@ -746,7 +1174,7 @@ const Board = () => {
                             <label style={{ position: "relative", top: "50px" }}>{player3Name}</label>
                         </div>
 
-                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[2] }}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[1] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -755,7 +1183,7 @@ const Board = () => {
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{ visibility: frontCardVisibility[2] }}>
+                        <div className='grid-item' style={{ visibility: frontCardVisibility[1] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -823,7 +1251,7 @@ const Board = () => {
                         <label>Bet : $</label>
                         <label>{totalBetP2}</label>
                         <div className='hand-resultP2'>
-                            <label>WON</label>
+                            <label>{feedbackP2}</label>
                         </div>
                     </div>
 
@@ -867,7 +1295,7 @@ const Board = () => {
                             <label style={{ position: "relative", top: "50px" }}>{player2Name}</label>
                         </div>
 
-                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[1] }}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[0] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
@@ -876,11 +1304,11 @@ const Board = () => {
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{ visibility: frontCardVisibility[1] }}>
+                        <div className='grid-item' style={{ visibility: frontCardVisibility[0] }}>
                             <div className='points-container' style={{ visibility: "hidden" }}>
                                 <label>5</label>
                             </div>
-                            <div className='card-front'>
+                            <div className='card-front' style={{ backgroundImage: frontCardImageP2 }}>
 
                             </div>
                         </div>
@@ -944,7 +1372,7 @@ const Board = () => {
                         <label>Bet : $</label>
                         <label>{totalBetP4}</label>
                         <div className='hand-resultP4' style={{ transform: "rotate(-90deg)" }}>
-                            <label>WON</label>
+                            <label>{feedbackP4}</label>
                         </div>
                     </div>
 
@@ -1061,43 +1489,34 @@ const Board = () => {
                 </div>
 
                 <div className='player1-container' style={{ visibility: playersVisibility[0] }}>
+                    
                     <div className='total-bet' style={{ backgroundColor: "blue" }}>
                         <label>Bet : $</label>
                         <label>{totalBetP1}</label>
                     </div>
                     <div className='hand-result'>
-                        <label>WON</label>
+                        <label>{feedbackP1}</label>
                     </div>
 
                     <div className='grid-apuesta-container'>
                         <div className='grid-item1-apuesta' style={{ visibility: chipsVisibilityP1[0] }}>
-                            <div className='chip' onClick={() => pickUpChipFromBet(0)} style={{ backgroundImage: 'url("img/chips/100.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[0]} onClick={() => pickUpChipFromBet(0)} style={{ backgroundImage: 'url("img/chips/100.png")' }} />
                             <label>{chipsbet[0]}</label>
                         </div>
                         <div className='grid-item2-apuesta' style={{ visibility: chipsVisibilityP1[1] }}>
-                            <div className='chip' onClick={() => pickUpChipFromBet(1)} style={{ backgroundImage: 'url("img/chips/250.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[1]} onClick={() => pickUpChipFromBet(1)} style={{ backgroundImage: 'url("img/chips/250.png")' }} />
                             <label>{chipsbet[1]}</label>
                         </div>
                         <div className='grid-item3-apuesta' style={{ visibility: chipsVisibilityP1[2] }}>
-                            <div className='chip' onClick={() => pickUpChipFromBet(2)} style={{ backgroundImage: 'url("img/chips/500.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[2]} onClick={() => pickUpChipFromBet(2)} style={{ backgroundImage: 'url("img/chips/500.png")' }} />
                             <label>{chipsbet[2]}</label>
                         </div>
                         <div className='grid-item4-apuesta' style={{ visibility: chipsVisibilityP1[3] }}>
-                            <div className='chip' onClick={() => pickUpChipFromBet(3)} style={{ backgroundImage: 'url("img/chips/1000.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[3]} onClick={() => pickUpChipFromBet(3)} style={{ backgroundImage: 'url("img/chips/1000.png")' }} />
                             <label>{chipsbet[3]}</label>
                         </div>
                         <div className='grid-item5-apuesta' style={{ visibility: chipsVisibilityP1[4] }}>
-                            <div className='chip' onClick={() => pickUpChipFromBet(4)} style={{ backgroundImage: 'url("img/chips/5000.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[4]} onClick={() => pickUpChipFromBet(4)} style={{ backgroundImage: 'url("img/chips/5000.png")' }} />
                             <label>{chipsbet[4]}</label>
                         </div>
                     </div>
@@ -1111,31 +1530,31 @@ const Board = () => {
                                 <label>BANK</label>
                             </div>
                         </div>
-                        <div className='grid-item' style={{ visibility: hiddenCardVisibility[0] }}>
+                        <div className='grid-item' style={{ visibility: hiddenCardVisibilityP1 }}>
                             <div className='points-container'>
-                                <label>5</label>
+                                <label>{hiddenCardPoints}</label>
                             </div>
                             <div className='card-back'>
 
                             </div>
 
                         </div>
-                        <div className='grid-item' style={{ visibility: frontCardVisibility[0] }}>
-                            <div className='points-container'>
+                        <div className='grid-item' style={{ visibility: frontCardVisibilityP1 }}>
+                            <div className='points-container' style={{visibility:"hidden"}}>
                                 <label>5</label>
                             </div>
-                            <div className='card-front'>
+                            <div className='card-front' style={{ backgroundImage: frontCardImageP1 }}>
 
                             </div>
                         </div>
                         <div className='grid-item'>
                             <div className='points-container'>
-                                <label>5</label>
+                                <label>{totalCardPoints}</label>
                             </div>
                             <div className='menu-actions'>
-                                <button className='action-button' disabled={actionsVisibility[0]}>Give</button>
-                                <button className='action-button' disabled={actionsVisibility[1]}>Hit</button>
-                                <button className='action-button' disabled={actionsVisibility[2]}>Bet</button>
+                                <button className='action-button' disabled={actionsVisibility[0]} onClick={hit}>Hit</button>
+                                <button className='action-button' disabled={actionsVisibility[1]} onClick={bet}>Bet</button>
+                                <button className='action-button' disabled={actionsVisibility[2]} onClick={plant}>Plant</button>
                             </div>
                         </div>
 
@@ -1144,34 +1563,24 @@ const Board = () => {
 
                     <div className='grid-container'>
                         <div className='grid-item'>
-                            <div className='chip' onClick={() => handleClick(0)} style={{ backgroundImage: 'url("img/chips/100.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[0]} onClick={() => handleClick(0)} style={{ backgroundImage: 'url("img/chips/100.png")' }} />
                             <label>{treasureP1[0]}</label>
 
                         </div>
                         <div className='grid-item'>
-                            <div className='chip' onClick={() => handleClick(1)} style={{ backgroundImage: 'url("img/chips/250.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[1]} onClick={() => handleClick(1)} style={{ backgroundImage: 'url("img/chips/250.png")' }} />
                             <label>{treasureP1[1]}</label>
                         </div>
                         <div className='grid-item'>
-                            <div className='chip' onClick={() => handleClick(2)} style={{ backgroundImage: 'url("img/chips/500.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[2]} onClick={() => handleClick(2)} style={{ backgroundImage: 'url("img/chips/500.png")' }} />
                             <label>{treasureP1[2]}</label>
                         </div>
                         <div className='grid-item'>
-                            <div className='chip' onClick={() => handleClick(3)} style={{ backgroundImage: 'url("img/chips/1000.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[3]} onClick={() => handleClick(3)} style={{ backgroundImage: 'url("img/chips/1000.png")' }} />
                             <label>{treasureP1[3]}</label>
                         </div>
                         <div className='grid-item'>
-                            <div className='chip' onClick={() => handleClick(4)} style={{ backgroundImage: 'url("img/chips/5000.png")' }}>
-
-                            </div>
+                            <button className='chip' disabled={chipsInteractable[4]} onClick={() => handleClick(4)} style={{ backgroundImage: 'url("img/chips/5000.png")' }} />
                             <label>{treasureP1[4]}</label>
                         </div>
                     </div>
