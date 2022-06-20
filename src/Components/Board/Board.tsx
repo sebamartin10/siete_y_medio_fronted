@@ -159,7 +159,7 @@ const Board = () => {
 
 
 
-                                axios.get("http://localhost:3000/treasures/" + player_hand.data.player_hand.player_id)
+                                axios.get("http://localhost:3000/players/" + player_hand.data.player_hand.player_id)
                                     .then(treasure_response => {
                                         let new_chips100_amount = treasure_response.data.treasure.chips100_amount + chips100_amount;
                                         let new_chips250_amount = treasure_response.data.treasure.chips250_amount + chips250_amount;
@@ -177,7 +177,7 @@ const Board = () => {
                                         };
                                         axios.put("http://localhost:3000/treasures/" + treasure_response.data.treasure.id + "?", { treasure })
                                     });
-                                axios.get("http://localhost:3000/treasures/" + playerID + "?")
+                                axios.get("http://localhost:3000/players/" + playerID + "?")
                                     .then(myTreasure => {
                                         console.log("Mis fichas de 100 son " + myTreasure.data.treasure.chips100_amount);
                                         let new_chips100_amount = myTreasure.data.treasure.chips100_amount - chips100_amount;
@@ -237,133 +237,9 @@ const Board = () => {
                 toggleActions(true, false, true);
             })
     }
-    function increase_treasure(player_id: number, chips100_amount: number, chips250_amount: number, chips500_amount: number, chips1k_amount: number, chips5k_amount: number) {
-        console.log("Le incremento al player "+playerID);
-        axios.get("http://localhost:3000/treasures/" + player_id)
-            .then(treasure_response => {
-
-                let new_chips100_amount = treasure_response.data.treasure.chips100_amount + chips100_amount;
-                let new_chips250_amount = treasure_response.data.treasure.chips250_amount + chips250_amount;
-                let new_chips500_amount = treasure_response.data.treasure.chips500_amount + chips500_amount;
-                let new_chips1k_amount = treasure_response.data.treasure.chips1k_amount + chips1k_amount;
-                let new_chips5k_amount = treasure_response.data.treasure.chips5k_amount + chips5k_amount;
-                let newTotal = (new_chips100_amount * 100) + (new_chips250_amount * 250) + (new_chips500_amount * 500) + (new_chips1k_amount * 1000) + (new_chips5k_amount * 5000);
-                const treasure = {
-                    chips100_amount: new_chips100_amount,
-                    chips250_amount: new_chips250_amount,
-                    chips500_amount: new_chips500_amount,
-                    chips1k_amount: new_chips1k_amount,
-                    chips5k_amount: new_chips5k_amount,
-                    total: newTotal
-                };
-                axios.put("http://localhost:3000/treasures/" + treasure_response.data.treasure.id + "?", { treasure })
-                    .then(treasure_updated => {
-                        let newTreasureP1 = [...treasureP1];
-                        newTreasureP1[0] = treasure_updated.data.treasure.chips100_amount;
-                        newTreasureP1[1] = treasure_updated.data.treasure.chips250_amount;
-                        newTreasureP1[2] = treasure_updated.data.treasure.chips500_amount;
-                        newTreasureP1[3] = treasure_updated.data.treasure.chips1k_amount;
-                        newTreasureP1[4] = treasure_updated.data.treasure.chips5k_amount;
-                        setTreasureP1(newTreasureP1)
-                        console.log("El nuevo total del tesoro es: " + treasure_updated.data.treasure.total);
-                        setTotalTreasure(treasure_updated.data.treasure.total);
-
-                        let newchipsVisibility = [...chipsVisibilityP1];
-                        newchipsVisibility.fill("hidden");
-                        setChipsVisibilityP1(newchipsVisibility);
-                    })
-            });
-    }
-    function decrease_treasure(player_id: number, chips100_amount: number, chips250_amount: number, chips500_amount: number, chips1k_amount: number, chips5k_amount: number) {
-        axios.get("http://localhost:3000/treasures/" + playerID + "?")
-            .then(myTreasure => {
-                let new_chips100_amount = myTreasure.data.treasure.chips100_amount - chips100_amount;
-                let new_chips250_amount = myTreasure.data.treasure.chips250_amount - chips250_amount;
-                let new_chips500_amount = myTreasure.data.treasure.chips500_amount - chips500_amount;
-                let new_chips1k_amount = myTreasure.data.treasure.chips1k_amount - chips1k_amount;
-                let new_chips5k_amount = myTreasure.data.treasure.chips5k_amount - chips5k_amount;
-                let newTotal = (new_chips100_amount * 100) + (new_chips250_amount * 250) + (new_chips500_amount * 500) + (new_chips1k_amount * 1000) + (new_chips5k_amount * 5000);
-                const treasure = {
-                    chips100_amount: new_chips100_amount,
-                    chips250_amount: new_chips250_amount,
-                    chips500_amount: new_chips500_amount,
-                    chips1k_amount: new_chips1k_amount,
-                    chips5k_amount: new_chips5k_amount,
-                    total: newTotal
-                }
-                axios.put("http://localhost:3000/treasures/" + myTreasure.data.treasure.id + "?", { treasure })
-                    .then(treasure_updated => {
-                        let newTreasureP1 = [...treasureP1];
-                        newTreasureP1[0] = treasure_updated.data.treasure.chips100_amount;
-                        newTreasureP1[1] = treasure_updated.data.treasure.chips250_amount;
-                        newTreasureP1[2] = treasure_updated.data.treasure.chips500_amount;
-                        newTreasureP1[3] = treasure_updated.data.treasure.chips1k_amount;
-                        newTreasureP1[4] = treasure_updated.data.treasure.chips5k_amount;
-                        setTreasureP1(newTreasureP1)
-                        console.log("El nuevo total del tesoro es: " + treasure_updated.data.treasure.total);
-                        setTotalTreasure(treasure_updated.data.treasure.total);
-
-                        let newchipsVisibility = [...chipsVisibilityP1];
-                        newchipsVisibility.fill("hidden");
-                        setChipsVisibilityP1(newchipsVisibility);
-                    })
-            })
-    }
-    function process_resultsV2(myCardPoints: number) {
-        if (myCardPoints > 7.5) {
-            payToPlayers();
-        } else {
-            axios.get("http://localhost:3000/rounds/" + currentRoundID + "?")
-                .then(currentRound => {
-                    for (let i = 0; i < currentRound.data.player_hands.length; i++) {
-                        if (currentRound.data.player_hands[i].player_id !== playerID) {
-                            console.log("Los puntos de carta del otro es " + currentRound.data.player_hands[i].total_points + " y mis puntos son " + myCardPoints);
-                            if (currentRound.data.player_hands[i].total_points > myCardPoints) {
-                                //Le pago
-                                console.log("Le debo pagar al id del player " + currentRound.data.player_hands[i].player_id);
-
-
-                                let chips100_amount: number = currentRound.data.player_bets[i].chips100_amount;
-                                let chips250_amount: number = currentRound.data.player_bets[i].chips250_amount;
-                                let chips500_amount: number = currentRound.data.player_bets[i].chips500_amount;
-                                let chips1k_amount: number = currentRound.data.player_bets[i].chips1k_amount;
-                                let chips5k_amount: number = currentRound.data.player_bets[i].chips5k_amount;
-                                
-                                setTimeout(()=>{
-                                    increase_treasure(currentRound.data.player_hands[i].player_id, chips100_amount, chips250_amount, chips500_amount, chips1k_amount, chips5k_amount);
-                                    decrease_treasure(playerID, chips100_amount, chips250_amount, chips500_amount, chips1k_amount, chips5k_amount);
-                                },(i*1000));
-                                
-
-
-                            }
-                            else {
-                                //Le cobro
-                                console.log("Le debo cobrar al id del player " + currentRound.data.player_hands[i].player_id);
-
-
-                                let chips100_amount_playerbet: number = currentRound.data.player_bets[i].chips100_amount;
-                                let chips250_amount_playerbet: number = currentRound.data.player_bets[i].chips250_amount;
-                                let chips500_amount_playerbet: number = currentRound.data.player_bets[i].chips500_amount;
-                                let chips1k_amount_playerbet: number = currentRound.data.player_bets[i].chips1k_amount;
-                                let chips5k_amount_playerbet: number = currentRound.data.player_bets[i].chips5k_amount;
-                                setTimeout(()=>{
-                                    decrease_treasure(currentRound.data.player_hands[i].player_id, chips100_amount_playerbet, chips250_amount_playerbet, chips500_amount_playerbet, chips1k_amount_playerbet, chips5k_amount_playerbet);
-                                    increase_treasure(playerID, chips100_amount_playerbet, chips250_amount_playerbet, chips500_amount_playerbet, chips1k_amount_playerbet, chips5k_amount_playerbet);
-                                },(i*1000))
-                                
-
-
-
-
-                            }
-                        }
-
-                    }
-                });
-        }
-    }
-    function process_results() {
+    
+    
+    function process_results(myCardPoints : number) {
 
         if (myCardPoints > 7.5) {
 
@@ -389,7 +265,7 @@ const Board = () => {
 
 
 
-                                        axios.get("http://localhost:3000/treasures/" + player_hand.data.player_hand.player_id)
+                                        axios.get("http://localhost:3000/players/" + player_hand.data.player_hand.player_id)
                                             .then(treasure_response => {
                                                 let new_chips100_amount = treasure_response.data.treasure.chips100_amount + chips100_amount;
                                                 let new_chips250_amount = treasure_response.data.treasure.chips250_amount + chips250_amount;
@@ -407,7 +283,7 @@ const Board = () => {
                                                 };
                                                 axios.put("http://localhost:3000/treasures/" + treasure_response.data.treasure.id + "?", { treasure })
                                             });
-                                        axios.get("http://localhost:3000/treasures/" + playerID + "?")
+                                        axios.get("http://localhost:3000/players/" + playerID + "?")
                                             .then(myTreasure => {
                                                 let new_chips100_amount = myTreasure.data.treasure.chips100_amount - chips100_amount;
                                                 let new_chips250_amount = myTreasure.data.treasure.chips250_amount - chips250_amount;
@@ -451,7 +327,7 @@ const Board = () => {
                                         let chips5k_amount_playerbet: number = currentRound.data.player_bets[i].chips5k_amount;
 
                                         //Le modifico su treasure
-                                        axios.get("http://localhost:3000/treasures/" + player_hand.data.player_hand.player_id)
+                                        axios.get("http://localhost:3000/players/" + player_hand.data.player_hand.player_id)
                                             .then(treasure_response => {
                                                 let new_chips100_amount = treasure_response.data.treasure.chips100_amount - chips100_amount_playerbet;
                                                 let new_chips250_amount = treasure_response.data.treasure.chips250_amount - chips250_amount_playerbet;
@@ -471,7 +347,7 @@ const Board = () => {
                                             });
                                         //Me modifico mi treasure
 
-                                        axios.get("http://localhost:3000/treasures/" + playerID + "?")
+                                        axios.get("http://localhost:3000/players/" + playerID + "?")
                                             .then(myTreasure => {
                                                 let new_chips100_amount = myTreasure.data.treasure.chips100_amount + chips100_amount_playerbet;
                                                 let new_chips250_amount = myTreasure.data.treasure.chips250_amount + chips250_amount_playerbet;
@@ -535,31 +411,25 @@ const Board = () => {
                             setCurrentRoundID(session.data.rounds[i].id);
                             roundID = session.data.rounds[i].id;
                             setFeedbackP1("Playing");
-                            let newChipsInteractable = [...chipsInteractable];
-                            newChipsInteractable.fill(false);
-                            setChipsInteractable(newChipsInteractable);
+                            setFeedbackP2("Waiting");
+                            setFeedbackP3("Waiting");
+                            setFeedbackP4("Waiting");
 
 
                             if (session.data.rounds[i].bank === playerName) {
                                 setIsBanker(true);
-                                let newBankVisibility = [...bankVisibility];
-                                newBankVisibility[0] = "visible";
-                                newBankVisibility[1] = "hidden";
-                                newBankVisibility[2] = "hidden";
-                                newBankVisibility[3] = "hidden";
-                                setBankVisibility(newBankVisibility);
                                 toggleActions(false, true, false);
+                                let newChipsInteractable = [...chipsInteractable];
+                                newChipsInteractable.fill(true);
+                                setChipsInteractable(newChipsInteractable);
 
                             } else {
                                 setIsBanker(false);
-                                let newBankVisibility = [...bankVisibility];
-                                newBankVisibility[0] = "hidden";
-                                newBankVisibility[1] = "hidden";
-                                newBankVisibility[2] = "hidden";
-                                newBankVisibility[3] = "hidden";
-                                setBankVisibility(newBankVisibility);
+                                
                                 toggleActions(false, false, false);
-
+                                let newChipsInteractable = [...chipsInteractable];
+                                newChipsInteractable.fill(false);
+                                setChipsInteractable(newChipsInteractable);
 
                             }
 
@@ -599,11 +469,13 @@ const Board = () => {
         if (isBanker) {
 
 
-            process_resultsV2(myCardPoints);
-            setTimeout(() => {
+            process_results(myCardPoints);
+            setTimeout(()=>{
                 finishRound();
                 createRound();
-            }, 2000);
+            },2000)
+            
+           
 
 
         } else {
@@ -699,7 +571,7 @@ const Board = () => {
                                 setTimeout(() => {
                                     hideBetFromTable();
                                     hideChosenCardsFromTable();
-                                }, 1000);
+                                }, 2000);
 
                             }
                         });
@@ -749,7 +621,7 @@ const Board = () => {
         setTimeout(() => {
             hideBetFromTable();
             hideChosenCardsFromTable();
-        }, 1000);
+        }, 2000);
     }
 
     function setInitialStateOfGame() {
@@ -779,7 +651,7 @@ const Board = () => {
                         bank = session.data.rounds[i].bank;
                         if (session.data.rounds[i].current_turn !== playerName) {
                             //Obtengo el estado actual de mi tesoro
-                            axios.get("http://localhost:3000/treasures/" + playerID + "?")
+                            axios.get("http://localhost:3000/players/" + playerID + "?")
                                 .then(myTreasure => {
                                     let newTreasureP1 = [...treasureP1];
                                     newTreasureP1[0] = myTreasure.data.treasure.chips100_amount;
@@ -828,6 +700,8 @@ const Board = () => {
                                             setPlayersVisibility(newPlayersVisibility);
 
                                             setPlayerOnTheLeft(player.data.player.name);
+
+                                            
 
                                             //Obtengo las apuestas
                                             axios.get("http://localhost:3000/rounds/" + roundID + "?")
@@ -899,8 +773,6 @@ const Board = () => {
 
 
                                             setPlayer2Name(player.data.player.name);
-
-
 
                                             let newPlayersVisibility = [...playersVisibility];
                                             newPlayersVisibility[0] = "visible";
@@ -1607,9 +1479,11 @@ const Board = () => {
                                 setTotalTreasure(player_responseP1.data.treasure.total);
 
                                 setIsBanker(false);
-                                setFeedbackP1("Playing");
+                                
 
-
+                                let newBankVisibility = [...bankVisibility];
+                                newBankVisibility[3] = "visible";
+                                setBankVisibility(newBankVisibility);
 
                             });
 
@@ -1650,7 +1524,7 @@ const Board = () => {
                                         setChipsVisibilityP4(newChipsVisibilityP4);
 
                                         setPlayer4Name(player_responseP4.data.player.name);
-                                        setFeedbackP4("Waiting");
+                                        
                                     });
 
                             }
@@ -1751,6 +1625,9 @@ const Board = () => {
 
                             }
                         }
+                        let newBankVisibility = [...bankVisibility];
+                        newBankVisibility[2] = "visible";
+                        setBankVisibility(newBankVisibility);
                         let newPlayersVisibility = [...playersVisibility];
                         newPlayersVisibility[0] = "visible";
                         newPlayersVisibility[2] = "visible";
@@ -1999,7 +1876,7 @@ const Board = () => {
                         <label>Password:</label>
                     </div>
                     <div className='grid-item'>
-                        <input placeholder='your password' />
+                        <input type="password" placeholder='your password' />
                     </div>
                 </div>
                 <div style={{ width: "100%", top: "30px", position: "relative", textAlign: "center", margin: "10px" }}>
@@ -2088,6 +1965,9 @@ const Board = () => {
                     <div className='grid-container-x4'>
                         <div className='user-profile' style={{ transform: "rotate(180deg)" }}>
                             <label style={{ position: "relative", top: "50px" }}>{player3Name}</label>
+                            <div className='bank' style={{ visibility: bankVisibility[2] }}>
+                                <label>BANK</label>
+                            </div>
                         </div>
 
                         <div className='grid-item' style={{ visibility: hiddenCardVisibility[1] }}>
@@ -2333,6 +2213,9 @@ const Board = () => {
                     <div className='grid-container-x4'>
                         <div className='user-profile' style={{ transform: "rotate(180deg)" }}>
                             <label style={{ position: "relative", top: "50px" }}>{player4Name}</label>
+                            <div className='bank' style={{ visibility: bankVisibility[3] }}>
+                                <label>BANK</label>
+                            </div>
                         </div>
 
                         <div className='grid-item' style={{ visibility: hiddenCardVisibility[2] }}>
